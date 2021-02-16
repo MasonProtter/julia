@@ -173,8 +173,11 @@ julia> fieldnames(Rational)
 (:num, :den)
 ```
 """
-fieldnames(t::DataType) = (fieldcount(t); # error check to make sure type is specific enough
-                           (_fieldnames(t)...,))::Tuple{Vararg{Symbol}}
+function fieldnames(t::DataType)
+    @_pure_meta
+    fieldcount(t) # error check to make sure type is specific enough
+    (_fieldnames(t)...,)
+end
 fieldnames(t::UnionAll) = fieldnames(unwrap_unionall(t))
 fieldnames(::Core.TypeofBottom) =
     throw(ArgumentError("The empty type does not have field names since it does not have instances."))
