@@ -935,3 +935,14 @@ end
     @test f !== Core._apply
     @test occursin("f2#", String(nameof(f)))
 end
+
+
+# issue #29100
+function f29100(data)
+    names = propertynames(data)
+    map(
+        name -> getproperty(data, name),
+        names
+    )
+end
+@inferred f29100(:a => 1)
