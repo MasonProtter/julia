@@ -1996,6 +1996,10 @@ function abstract_finalizer(interp::AbstractInterpreter, argtypes::Vector{Any}, 
     return CallMeta(Nothing, Effects(), NoCallInfo())
 end
 
+function abstract_wormhole(interp::AbstractInterpreter, (; fargs, argtypes)::ArgInfo, si::StmtInfo, sv::AbsIntState)
+    return CallMeta(OpaqueClosure, Effects(), NoCallInfo())
+end
+
 # call where the function is known exactly
 function abstract_call_known(interp::AbstractInterpreter, @nospecialize(f),
         arginfo::ArgInfo, si::StmtInfo, sv::AbsIntState,
@@ -2022,6 +2026,8 @@ function abstract_call_known(interp::AbstractInterpreter, @nospecialize(f),
     elseif isa(f, Core.OpaqueClosure)
         # calling an OpaqueClosure about which we have no information returns no information
         return CallMeta(typeof(f).parameters[2], Effects(), NoCallInfo())
+    elseif f === wormhole
+        return abstract_wormhole(interp, arginfo, si, sv)
     elseif f === TypeVar
         # Manually look through the definition of TypeVar to
         # make sure to be able to get `PartialTypeVar`s out.
