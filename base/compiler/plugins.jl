@@ -18,7 +18,7 @@ Call function `f` with arguments `args` within the context of
 a different compiler plugin.
 """
 function invoke_within(C::CompilerPlugin, f, args...)
-    tunnel = wormhole(C, f, args...)::OpaqueClosure
+    tunnel = wormhole(C, f, args...)::Core.OpaqueClosure
     # TODO: Implement dynamically scoped semantics for compiler plugin
     # current_compiler = current_task().compiler
     # current_task().compiler = C # We have now switched dynamic compiler contexts
@@ -29,13 +29,13 @@ function invoke_within(C::CompilerPlugin, f, args...)
     end
 end
 
-function wormhole(C::CompilerPlugin, f, args...)::OpaqueClosure
+function wormhole(C::CompilerPlugin, f, args...)::Core.OpaqueClosure
     @nospecialize f args
     interp = abstract_interpreter(C, get_world_counter())
     
-    tt = signature_type(f, Tuple{map(Typeof, args)...})
+    tt = signature_type(f, Tuple{map(Core.Typeof, args)...})
     mt = method_table(interp)
-    match, valid_worlds, overlayed = findsup(tt, mt)
+    match, _ = findsup(tt, mt)
 
     if match === nothing
         error("Unable to find matching $tt")
@@ -44,12 +44,12 @@ function wormhole(C::CompilerPlugin, f, args...)::OpaqueClosure
     code = get(code_cache(interp), mi, nothing)
     if code !== nothing
         inf = code.inferred
-        ci = Base._uncompressed_ir(code, inf)
-        return OpaqueClosure(ci)
+        ci = _uncompressed_ir(code, inf)
+        return Core.OpaqueClosure(ci)
     end
     result = InferenceResult(mi)
     frame = InferenceState(result, #=cache=# :global, interp)
     typeinf(interp, frame)
     ci = frame.src
-    return OpaqueClosure(ci)
+    return Core.OpaqueClosure(ci)
 end

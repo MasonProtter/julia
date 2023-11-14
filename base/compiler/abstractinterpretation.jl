@@ -1997,7 +1997,7 @@ function abstract_finalizer(interp::AbstractInterpreter, argtypes::Vector{Any}, 
 end
 
 function abstract_wormhole(interp::AbstractInterpreter, (; fargs, argtypes)::ArgInfo, si::StmtInfo, sv::AbsIntState)
-    return CallMeta(OpaqueClosure, Effects(), NoCallInfo())
+    return CallMeta(Core.OpaqueClosure, Effects(), NoCallInfo())
 end
 
 # call where the function is known exactly
