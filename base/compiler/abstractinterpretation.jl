@@ -1997,7 +1997,44 @@ function abstract_finalizer(interp::AbstractInterpreter, argtypes::Vector{Any}, 
 end
 
 function abstract_wormhole(interp::AbstractInterpreter, (; fargs, argtypes)::ArgInfo, si::StmtInfo, sv::AbsIntState)
-    return CallMeta(Core.OpaqueClosure, Effects(), NoCallInfo())
+    if length(argtypes) < 3
+        return CallMeta(Union{}, Effects(), NoCallInfo())
+    end
+    CT = argtypes[2]
+    C = singleton_type(CT)
+    if C === nothing
+        if CT isa Const
+            C = CT.val
+        else
+            # CompilerPlugin is not a singleton type result may depend on runtime configuration
+            add_remark!(interp, sv, "Skipped wormhole since compiler plugin not constant")
+            return CallMeta(OpaqueClosure, Effects(), NoCallInfo()) # or call abstract_call_gf_by_type
+        end
+    end
+    inner_argtypes = argtypes[3:end]
+
+    other_interp = abstract_interpreter(C, interp.world)
+    tt = argtypes_to_type(inner_argtypes)
+    mt = method_table(other_interp)
+    match, _ = findsup(tt, mt)
+
+    if match === nothing
+        return CallMeta(Union{}, Effects(), NoCallInfo())
+    end
+
+    mi = specialize_method(match.method, match.spec_types, match.sparams)::MethodInstance
+    code = get(code_cache(interp), mi, nothing)
+    if code !== nothing
+        inf = code.inferred
+        ci = _uncompressed_ir(code, inf)
+    else
+        result = InferenceResult(mi)
+        frame = InferenceState(result, #=cache=# :global, interp)
+        typeinf(interp, frame)
+        ci = frame.src
+    end
+    oc = Core.OpaqueClosure(ci)
+    return CallMeta(Const(oc), Effects(), NoCallInfo())
 end
 
 # call where the function is known exactly
