@@ -2037,6 +2037,9 @@ function abstract_wormhole(interp::AbstractInterpreter, ai::ArgInfo, si::StmtInf
     end
     oc = Core.OpaqueClosure(ci)
 
+    # Should this be PartialOpaque? IIUC only this is handled by `abstract_call_opaque_closure`
+    # and that produces `OpaqueClosureCallInfo` which is handled by inlining.
+    # But `abstract_call_opaque_closure` would need to also have the source abstract interpreter.
     return CallMeta(Const(oc), Effects(EFFECTS_TOTAL), MethodResultPure())
 end
 
