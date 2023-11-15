@@ -102,6 +102,9 @@ function count_const_size(@nospecialize(x), count_self::Bool = true)
 end
 
 function is_inlineable_constant(@nospecialize(x))
+    if x isa Core.OpaqueClosure
+        return true
+    end
     return count_const_size(x) <= MAX_INLINE_CONST_SIZE
 end
 

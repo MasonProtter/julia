@@ -2036,7 +2036,8 @@ function abstract_wormhole(interp::AbstractInterpreter, ai::ArgInfo, si::StmtInf
         ci = frame.src
     end
     oc = Core.OpaqueClosure(ci)
-    return CallMeta(Const(oc), Effects(EFFECTS_TOTAL), MethodResultPure(call.info))
+
+    return CallMeta(Const(oc), Effects(EFFECTS_TOTAL), MethodResultPure())
 end
 
 # call where the function is known exactly
