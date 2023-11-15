@@ -1996,10 +1996,12 @@ function abstract_finalizer(interp::AbstractInterpreter, argtypes::Vector{Any}, 
     return CallMeta(Nothing, Effects(), NoCallInfo())
 end
 
-function abstract_wormhole(interp::AbstractInterpreter, (; fargs, argtypes)::ArgInfo, si::StmtInfo, sv::AbsIntState)
+function abstract_wormhole(interp::AbstractInterpreter, ai::ArgInfo, si::StmtInfo, sv::AbsIntState)
+    (; fargs, argtypes) = ai
     if length(argtypes) < 3
         return CallMeta(Union{}, Effects(), NoCallInfo())
     end
+    call = abstract_call_gf_by_type(interp, wormhole, ai, si, argtypes_to_type(argtypes), sv, #=max_methods=#1)
     CT = argtypes[2]
     C = singleton_type(CT)
     if C === nothing
@@ -2008,7 +2010,7 @@ function abstract_wormhole(interp::AbstractInterpreter, (; fargs, argtypes)::Arg
         else
             # CompilerPlugin is not a singleton type result may depend on runtime configuration
             add_remark!(interp, sv, "Skipped wormhole since compiler plugin not constant")
-            return CallMeta(OpaqueClosure, Effects(), NoCallInfo()) # or call abstract_call_gf_by_type
+            return call
         end
     end
     inner_argtypes = argtypes[3:end]
@@ -2019,7 +2021,7 @@ function abstract_wormhole(interp::AbstractInterpreter, (; fargs, argtypes)::Arg
     match, _ = findsup(tt, mt)
 
     if match === nothing
-        return CallMeta(Union{}, Effects(), NoCallInfo())
+        return call
     end
 
     mi = specialize_method(match.method, match.spec_types, match.sparams)::MethodInstance
@@ -2034,7 +2036,7 @@ function abstract_wormhole(interp::AbstractInterpreter, (; fargs, argtypes)::Arg
         ci = frame.src
     end
     oc = Core.OpaqueClosure(ci)
-    return CallMeta(Const(oc), Effects(), NoCallInfo())
+    return CallMeta(Const(oc), Effects(EFFECTS_TOTAL), MethodResultPure(call.info))
 end
 
 # call where the function is known exactly
