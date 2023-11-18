@@ -1,6 +1,14 @@
 abstract type CompilerPlugin end
 
-struct NativeCompilerPlugin <: CompilerPlugin end
+# struct NativeCompilerPlugin <: CompilerPlugin end
+# We use `nothing` as the tag value for the NativeCompilerPlugin.
+NativeCompilerPlugin() = nothing
+
+# Notes:
+# - CompilerPlugins are used as tags for CodeInstances,
+#   we thus need to make the "unique" similar to MethodInstances
+# - Instead of CompilerPlugins maybe a better name is CompilerInstances
+# - How do we deal with nesting?
 
 """
     abstract_interpreter(::CompilerPlugin, world)
@@ -9,7 +17,7 @@ Construct an [`AbstractInterpreter`](@ref) for this compiler plugin.
 """
 function abstract_interpreter end
 
-abstract_interpreter(::NativeCompilerPlugin, world) = NativeInterpreter(world)
+abstract_interpreter(::Nothing, world) = NativeInterpreter(world)
 
 """
     invoke_within(::CompilerPlugin, f, args...)
@@ -17,9 +25,8 @@ abstract_interpreter(::NativeCompilerPlugin, world) = NativeInterpreter(world)
 Call function `f` with arguments `args` within the context of
 a different compiler plugin.
 """
-function invoke_within(C::CompilerPlugin, f, args...)
+function invoke_within(C::Union{Nothing, CompilerPlugin}, f, args...)
     tunnel = wormhole(C, f, args...)::Core.OpaqueClosure
-    # TODO: Implement dynamically scoped semantics for compiler plugin
     current_compilerplugin = current_task().compilerplugin
     current_task().compilerplugin = C # We have now switched dynamic compiler contexts
     try
@@ -29,7 +36,7 @@ function invoke_within(C::CompilerPlugin, f, args...)
     end
 end
 
-function wormhole(C::CompilerPlugin, f, args...)::Core.OpaqueClosure
+function wormhole(C::Union{Nothing, CompilerPlugin}, f, args...)::Core.OpaqueClosure
     @nospecialize f args
     interp = abstract_interpreter(C, get_world_counter())
     
