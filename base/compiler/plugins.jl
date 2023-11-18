@@ -20,12 +20,12 @@ a different compiler plugin.
 function invoke_within(C::CompilerPlugin, f, args...)
     tunnel = wormhole(C, f, args...)::Core.OpaqueClosure
     # TODO: Implement dynamically scoped semantics for compiler plugin
-    # current_compiler = current_task().compiler
-    # current_task().compiler = C # We have now switched dynamic compiler contexts
+    current_compilerplugin = current_task().compilerplugin
+    current_task().compilerplugin = C # We have now switched dynamic compiler contexts
     try
         return tunnel(args...) # Execute tunnel within new dynamic context
     finally
-        # current_task().compiler = current_compiler
+        current_task().compilerplugin = current_compilerplugin
     end
 end
 

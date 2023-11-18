@@ -2174,6 +2174,7 @@ typedef struct _jl_task_t {
     jl_value_t *donenotify;
     jl_value_t *result;
     jl_value_t *scope;
+    jl_value_t *compilerplugin;
     jl_function_t *start;
     // 4 byte padding on 32-bit systems
     // uint32_t padding0;
