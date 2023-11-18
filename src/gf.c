@@ -439,7 +439,7 @@ JL_DLLEXPORT jl_value_t *jl_call_in_typeinf_world(jl_value_t **args, int nargs)
 JL_DLLEXPORT jl_value_t *jl_rettype_inferred(jl_method_instance_t *mi, size_t min_world, size_t max_world) JL_NOTSAFEPOINT
 {
     jl_code_instance_t *codeinst = jl_atomic_load_relaxed(&mi->cache);
-    jl_value_t compilerplugin = jl_current_task->compilerplugin;
+    jl_value_t *compilerplugin = jl_current_task->compilerplugin;
     while (codeinst) {
         if (codeinst->min_world <= min_world && max_world <= codeinst->max_world && jl_egal(codeinst->compilerplugin, compilerplugin)) {
             jl_value_t *code = jl_atomic_load_relaxed(&codeinst->inferred);
