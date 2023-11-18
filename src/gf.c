@@ -495,6 +495,7 @@ JL_DLLEXPORT jl_code_instance_t *jl_new_codeinst(
     jl_code_instance_t *codeinst = (jl_code_instance_t*)jl_gc_alloc(ct->ptls, sizeof(jl_code_instance_t),
             jl_code_instance_type);
     codeinst->def = mi;
+    codeinst->compilerplugin = jl_nothing;
     codeinst->min_world = min_world;
     codeinst->max_world = max_world;
     codeinst->rettype = rettype;

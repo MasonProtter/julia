@@ -402,6 +402,7 @@ typedef struct _jl_opaque_closure_t {
 typedef struct _jl_code_instance_t {
     JL_DATA_TYPE
     jl_method_instance_t *def; // method this is specialized from
+    jl_value_t *compilerplugin; // CompilerPlugins this belongs to.
     _Atomic(struct _jl_code_instance_t*) next; // pointer to the next cache entry
 
     // world range for which this object is valid to use
