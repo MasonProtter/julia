@@ -10,6 +10,7 @@ ranges. This struct abstracts over access to this cache.
 struct InternalCodeCache end
 
 function setindex!(cache::InternalCodeCache, ci::CodeInstance, mi::MethodInstance)
+    # @assert ci.compilerplugin === nothing
     ccall(:jl_mi_cache_insert, Cvoid, (Any, Any), mi, ci)
     return cache
 end
@@ -49,11 +50,11 @@ WorldView(wvc::WorldView, wr::WorldRange) = WorldView(wvc.cache, wr)
 WorldView(wvc::WorldView, args...) = WorldView(wvc.cache, args...)
 
 function haskey(wvc::WorldView{InternalCodeCache}, mi::MethodInstance)
-    return ccall(:jl_rettype_inferred, Any, (Any, UInt, UInt), mi, first(wvc.worlds), last(wvc.worlds)) !== nothing
+    return ccall(:jl_rettype_inferred_within, Any, (Any, UInt, UInt, Any), mi, first(wvc.worlds), last(wvc.worlds), nothing) !== nothing
 end
 
 function get(wvc::WorldView{InternalCodeCache}, mi::MethodInstance, default)
-    r = ccall(:jl_rettype_inferred, Any, (Any, UInt, UInt), mi, first(wvc.worlds), last(wvc.worlds))
+    r = ccall(:jl_rettype_inferred_within, Any, (Any, UInt, UInt, Any), mi, first(wvc.worlds), last(wvc.worlds), nothing)
     if r === nothing
         return default
     end

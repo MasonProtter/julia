@@ -60,3 +60,33 @@ function wormhole(C::Union{Nothing, CompilerPlugin}, f, args...)::Core.OpaqueClo
     ci = frame.src
     return Core.OpaqueClosure(ci)
 end
+
+"""
+    struct CompilerPluginCodeCache
+
+Internally, each `MethodInstance` keep a unique global cache of code instances
+that have been created for the given method instance, stratified by world age
+ranges. This struct abstracts over access to this cache.
+"""
+struct CompilerPluginCodeCache
+    compilerplugin::Union{Nothing,CompilerPlugin}
+end
+
+function setindex!(cache::CompilerPluginCodeCache, ci::CodeInstance, mi::MethodInstance)
+    @assert ci.compilerplugin == cache.compilerplugin
+    ccall(:jl_mi_cache_insert, Cvoid, (Any, Any), mi, ci)
+    return cache
+end
+
+function haskey(wvc::WorldView{CompilerPluginCodeCache}, mi::MethodInstance)
+    return ccall(:jl_rettype_inferred_within, Any, (Any, UInt, UInt, Any), mi, first(wvc.worlds), last(wvc.worlds), wvc.cache.compilerplugin) !== nothing
+end
+
+function get(wvc::WorldView{CompilerPluginCodeCache}, mi::MethodInstance, default)
+    r = ccall(:jl_rettype_inferred_within, Any, (Any, UInt, UInt, Any), mi, first(wvc.worlds), last(wvc.worlds), wvc.cache.compilerplugin)
+    if r === nothing
+        return default
+    end
+    return r::CodeInstance
+end
+
