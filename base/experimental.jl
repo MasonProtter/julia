@@ -436,7 +436,7 @@ end
 Call function `f` with arguments `args` within the context of
 a different compiler plugin.
 """
-invoke_within(C::Union{Nothing, Core.Compiler.CompilerPlugin}, f, args...) = Core.Compiler.invoke_within(args...)
+invoke_within(C::Union{Nothing, Core.Compiler.CompilerPlugin}, f, args...) = Core.Compiler.invoke_within(C, f, args...)
 
 
 end
