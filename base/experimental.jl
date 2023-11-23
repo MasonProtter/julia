@@ -374,4 +374,69 @@ adding them to the global method table.
 """
 :@MethodTable
 
+"""
+    Experimental.@new_plugin(PluginName, method_table=nothing)
+
+Create a new compiler plugin whose name is `PluginName` and an accompanying abstract
+interpreter `PluginNameInterpreter`. If a second argument is supplied, that argument
+gets registered as the overlay method table for the plugin.
+"""
+macro new_plugin(PluginName, method_table=nothing)
+    InterpName = Symbol(PluginName, :Interpreter)
+    InterpCacheName = esc(Symbol(InterpName, :Cache))
+    InterpName = esc(InterpName)
+    PluginName = esc(PluginName)
+    C = Core
+    CC = Core.Compiler
+
+    method_table_ex = if !isnothing(method_table)
+        :($CC.method_table(interp::$InterpName) = $CC.OverlayMethodTable($CC.get_world_counter(interp), $(esc(method_table))))
+    end
+    
+    quote
+        struct $InterpCacheName
+            dict::IdDict{$C.MethodInstance,$C.CodeInstance}
+        end
+        $InterpCacheName() = $InterpCacheName(IdDict{$C.MethodInstance,$C.CodeInstance}())
+        struct $InterpName <: $CC.AbstractInterpreter
+            meta # additional information
+            world::UInt
+            inf_params::$CC.InferenceParams
+            opt_params::$CC.OptimizationParams
+            inf_cache::Vector{$CC.InferenceResult}
+            code_cache::$InterpCacheName
+            function $InterpName(meta = nothing;
+                                 world::UInt = Base.get_world_counter(),
+                                 inf_params::$CC.InferenceParams = $CC.InferenceParams(),
+                                 opt_params::$CC.OptimizationParams = $CC.OptimizationParams(),
+                                 inf_cache::Vector{$CC.InferenceResult} = $CC.InferenceResult[],
+                                 code_cache::$InterpCacheName = $InterpCacheName())
+                return new(meta, world, inf_params, opt_params, inf_cache, code_cache)
+            end
+        end
+        $CC.InferenceParams(interp::$InterpName) = interp.inf_params
+        $CC.OptimizationParams(interp::$InterpName) = interp.opt_params
+        $CC.get_world_counter(interp::$InterpName) = interp.world
+        $CC.get_inference_cache(interp::$InterpName) = interp.inf_cache
+        $CC.code_cache(interp::$InterpName) = $CC.WorldView(interp.code_cache, $CC.WorldRange(interp.world))
+        $CC.get(wvc::$CC.WorldView{$InterpCacheName}, mi::$C.MethodInstance, default) = $get(wvc.cache.dict, mi, default)
+        $CC.getindex(wvc::$CC.WorldView{$InterpCacheName}, mi::$C.MethodInstance) = $getindex(wvc.cache.dict, mi)
+        $CC.haskey(wvc::$CC.WorldView{$InterpCacheName}, mi::$C.MethodInstance) = $haskey(wvc.cache.dict, mi)
+        $CC.setindex!(wvc::$CC.WorldView{$InterpCacheName}, ci::$C.CodeInstance, mi::$C.MethodInstance) = $setindex!(wvc.cache.dict, ci, mi)
+        
+        struct $PluginName <: $CC.CompilerPlugin end
+        $CC.abstract_interpreter(::$PluginName, world) = $InterpName(; world)
+        $method_table_ex
+    end
+end
+
+"""
+    invoke_within(::Core.Compiler.CompilerPlugin, f, args...)
+
+Call function `f` with arguments `args` within the context of
+a different compiler plugin.
+"""
+invoke_within(C::Union{Nothing, Core.Compiler.CompilerPlugin}, f, args...) = Core.Compiler.invoke_within(args...)
+
+
 end

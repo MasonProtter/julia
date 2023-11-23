@@ -2015,7 +2015,7 @@ function abstract_wormhole(interp::AbstractInterpreter, ai::ArgInfo, si::StmtInf
     end
     inner_argtypes = argtypes[3:end]
 
-    other_interp = abstract_interpreter(C, interp.world)
+    other_interp = abstract_interpreter(C, get_world_counter(interp))
     tt = argtypes_to_type(inner_argtypes)
     mt = method_table(other_interp)
     match, _ = findsup(tt, mt)
