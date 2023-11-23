@@ -2070,7 +2070,7 @@ function abstract_call_known(interp::AbstractInterpreter, @nospecialize(f),
         # calling an OpaqueClosure about which we have no information returns no information
         return CallMeta(typeof(f).parameters[2], Effects(), NoCallInfo())
     elseif f === wormhole
-        return abstract_wormhole(interp, arginfo, si, sv)
+        return invokelatest(abstract_wormhole, interp, arginfo, si, sv)
     elseif f === TypeVar
         # Manually look through the definition of TypeVar to
         # make sure to be able to get `PartialTypeVar`s out.
