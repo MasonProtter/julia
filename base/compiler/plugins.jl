@@ -27,12 +27,14 @@ a different compiler plugin.
 """
 function invoke_within(C::Union{Nothing, CompilerPlugin}, f, args...)
     tunnel = wormhole(C, f, args...)::Core.OpaqueClosure
-    current_compilerplugin = current_task().compilerplugin
-    current_task().compilerplugin = C # We have now switched dynamic compiler contexts
+    the_task = ccall(:jl_get_current_task, Ref{Task}, ())
+    
+    current_compilerplugin = the_task.compilerplugin
+    the_task.compilerplugin = C # We have now switched dynamic compiler contexts
     try
         return tunnel(args...) # Execute tunnel within new dynamic context
     finally
-        current_task().compilerplugin = current_compilerplugin
+        the_task.compilerplugin = current_compilerplugin
     end
 end
 
