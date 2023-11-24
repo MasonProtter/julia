@@ -7,8 +7,14 @@ BE.@new_plugin(SinCosPlugin, SinCosTable)
 
 BE.@overlay SinCosTable sin(x) = cos(x)
 
+@noinline g(x) = sin(x[])
+
 @testset "SinToCosPlugin" begin
-    @test BE.invoke_within(SinCosPlugin(), sin, 1.0) == cos(1.0)
+    @test SinCosPlugin(sin, 1.0) == cos(1.0)
+ 
+    @test cos(1.0) == SinCosPlugin(Ref{Any}(1.0)) do r
+        g(r)
+    end
 end
 
 end

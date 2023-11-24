@@ -19,6 +19,11 @@ function abstract_interpreter end
 
 abstract_interpreter(::Nothing, world) = NativeInterpreter(world)
 
+
+isplugin(interp) = false
+function get_plugin_gref end
+
+
 """
     invoke_within(::CompilerPlugin, f, args...)
 
@@ -38,7 +43,7 @@ function invoke_within(C::Union{Nothing, CompilerPlugin}, f, args...)
     end
 end
 
-function wormhole(C::Union{Nothing, CompilerPlugin}, f, args...)::Core.OpaqueClosure
+function code_plugin(C::Union{Nothing, CompilerPlugin}, f, args...)
     @nospecialize f args
     interp = abstract_interpreter(C, get_world_counter())
     
@@ -54,15 +59,19 @@ function wormhole(C::Union{Nothing, CompilerPlugin}, f, args...)::Core.OpaqueClo
     if code !== nothing
         inf = code.inferred
         ci = _uncompressed_ir(code, inf)
-        return Core.OpaqueClosure(ci)
+        return ci
     end
     result = InferenceResult(mi)
     frame = InferenceState(result, #=cache=# :global, interp)
     typeinf(interp, frame)
     ci = frame.src
-    return Core.OpaqueClosure(ci)
-end
+    return ci
+end 
 
+function wormhole(C::Union{Nothing, CompilerPlugin}, f, args...)::Core.OpaqueClosure
+    Core.OpaqueClosure(code_plugin(C, f, args...))
+end
+                     
 """
     struct CompilerPluginCodeCache
 
@@ -91,4 +100,3 @@ function get(wvc::WorldView{CompilerPluginCodeCache}, mi::MethodInstance, defaul
     end
     return r::CodeInstance
 end
-

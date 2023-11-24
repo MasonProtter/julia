@@ -270,9 +270,47 @@ function _typeinf(interp::AbstractInterpreter, frame::InferenceState)
         if is_cached(caller)
             cache_result!(caller.interp, caller.result)
         end
+        if isplugin(interp)
+            fixup_plugin_entry!(interp, caller)
+        end
     end
     empty!(frames)
     return true
+end
+
+function fixup_plugin_entry!(interp::AbstractInterpreter, caller::InferenceState)
+    src = caller.src
+    if src isa CodeInfo
+        sptypes = if isempty(caller.linfo.sparam_vals)
+            VarState[]
+        else 
+            collect(caller.linfo.sparam_vals)
+        end 
+        if eltype(sptypes) == VarState
+            fixup_plugin_entry!(interp, src, sptypes)
+        end
+    elseif src isa OptimizationState
+        fixup_plugin_entry!(interp, src.src, src.sptypes)
+    end
+end
+
+function fixup_plugin_entry!(interp, src::CodeInfo, sptypes)
+    src.inferred || return nothing
+    for i = 1:length(src.code)
+        stmt = src.code[i]
+        if isexpr(stmt, :invoke)
+            stmt.head = :call
+            stmt.args[1] = get_plugin_gref(interp)
+            pushfirst!(stmt.args, GlobalRef(Core.Compiler, :invoke_within))
+        elseif isexpr(stmt, :call)
+            ft = argextype(stmt.args[1], src, sptypes)
+            f = singleton_type(ft)
+            if f === nothing || !(f isa Builtin)
+                pushfirst!(stmt.args, get_plugin_gref(interp))
+                pushfirst!(stmt.args, GlobalRef(Core.Compiler, :invoke_within))
+            end
+        end
+    end
 end
 
 function is_result_constabi_eligible(result::InferenceResult)

@@ -382,6 +382,7 @@ interpreter `PluginNameInterpreter`. If a second argument is supplied, that argu
 gets registered as the overlay method table for the plugin.
 """
 macro new_plugin(PluginName, method_table=nothing)
+    PluginTypeName = esc(Symbol(PluginName, :Type))
     InterpName = Symbol(PluginName, :Interpreter)
     InterpCacheName = esc(Symbol(InterpName, :Cache))
     InterpName = esc(InterpName)
@@ -424,19 +425,14 @@ macro new_plugin(PluginName, method_table=nothing)
         $CC.haskey(wvc::$CC.WorldView{$InterpCacheName}, mi::$C.MethodInstance) = $haskey(wvc.cache.dict, mi)
         $CC.setindex!(wvc::$CC.WorldView{$InterpCacheName}, ci::$C.CodeInstance, mi::$C.MethodInstance) = $setindex!(wvc.cache.dict, ci, mi)
         
-        struct $PluginName <: $CC.CompilerPlugin end
-        $CC.abstract_interpreter(::$PluginName, world) = $InterpName(; world)
+        struct $PluginTypeName <: $CC.CompilerPlugin end
+        const $PluginName = $PluginTypeName()
+        $CC.abstract_interpreter(::$PluginTypeName, world) = $InterpName(; world)
+        $CC.isplugin(::$InterpName) = true
+        $CC.get_plugin_gref(::$InterpName) = $PluginName
+        (P::$PluginTypeName)(f, args...) = $CC.invoke_within(P, f, args...)
         $method_table_ex
     end
 end
-
-"""
-    invoke_within(::Core.Compiler.CompilerPlugin, f, args...)
-
-Call function `f` with arguments `args` within the context of
-a different compiler plugin.
-"""
-invoke_within(C::Union{Nothing, Core.Compiler.CompilerPlugin}, f, args...) = Core.Compiler.invoke_within(C, f, args...)
-
 
 end
